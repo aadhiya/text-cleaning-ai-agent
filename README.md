@@ -113,6 +113,22 @@ Process noisy scraped/transcribed input for cleaner datasets.
 Filter hashtags, slang, and contractions for trend analysis or moderation.
 
 
+📂 Repo Structure
+├── main.py                     # Original FastAPI version (/clean, /clean_batch)
+├── app/
+│   └── main.py                 # LLM-enhanced router
+├── llm_router/
+│   └── intent_router.py        # Uses Ollama to route intent
+├── utils/
+│   └── cleaner.py              # Text cleaning logic
+├── streamlit_ui/
+│   └── app.py                  # Streamlit frontend
+├── oracle_use_cases/           # CLI demos for 3 enterprise use cases
+├── screenshots/
+│   └── streamlit_result.gif    # Sample output
+├── Readme.md                    # Setup & instructions
+├── Oracle Text Cleaning AI Agent  # demo for oracle use-case 
+
 ⚠️ License
 
 This project is NOT open-source.
