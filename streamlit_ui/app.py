@@ -1,9 +1,11 @@
-# streamlit_ui/app.py (full updated version to handle your new product reviews CSV)
+# streamlit_ui/app.py (auto-clear memory on Run Agent, simple version)
 
 import streamlit as st
 import requests
 import pandas as pd
 import io
+import os
+import json
 
 st.set_page_config(page_title="Oracle AI Agent", page_icon="🧠")
 st.title("🧠 Oracle Text Cleaning AI Agent")
@@ -18,6 +20,9 @@ user_input = st.text_area("📝 Enter a CRM log, survey comment, or training not
 survey_on = st.toggle("🧽 SurveyCleanMOD Agent", key="survey_toggle")
 crm_on = st.toggle("📋 CRM Clean Agent", key="crm_toggle")
 
+uploaded_csv_df = None  # Keep original CSV for later use
+input_file_type = None
+
 # Button to run agent
 if st.button("🧠 Run Agent"):
     if not uploaded_file and user_input.strip() == "":
@@ -25,6 +30,13 @@ if st.button("🧠 Run Agent"):
     else:
         with st.spinner("Processing..."):
             try:
+                # ✅ Clear memory before each new cleaning
+                logs_dir = os.path.join(os.getcwd(), "logs")
+                state_file_path = os.path.join(logs_dir, "cleaned_survey_state.json")
+                if os.path.exists(state_file_path):
+                    with open(state_file_path, "w") as f:
+                        json.dump({"cleaned": []}, f)
+
                 texts_to_clean = []
 
                 # If file uploaded, read its contents
@@ -32,9 +44,11 @@ if st.button("🧠 Run Agent"):
                     if uploaded_file.name.endswith(".txt"):
                         content = uploaded_file.read().decode("utf-8")
                         texts_to_clean = content.splitlines()
+                        input_file_type = "txt"
                     elif uploaded_file.name.endswith(".csv"):
-                        # Read with ISO-8859-1 encoding to handle messy characters
                         df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+                        uploaded_csv_df = df.copy()  # Save original CSV
+                        input_file_type = "csv"
 
                         # If Review and Summary columns exist, combine them
                         if "Review" in df.columns and "Summary" in df.columns:
@@ -44,9 +58,7 @@ if st.button("🧠 Run Agent"):
                                 .agg(" ".join, axis=1)
                                 .tolist()
                             )
-                            # Clean up empty entries after merging Review and Summary
                             texts_to_clean = [t for t in texts_to_clean if t.strip() != ""]
-
                         else:
                             st.error("Uploaded CSV must contain 'Review' and 'Summary' columns.")
                             st.stop()
@@ -54,6 +66,7 @@ if st.button("🧠 Run Agent"):
                 # Otherwise, use text area input
                 if user_input.strip() != "" and not uploaded_file:
                     texts_to_clean = [user_input]
+                    input_file_type = "txt"
 
                 # Always run LLM classification on first item
                 response = requests.post(
@@ -85,10 +98,22 @@ if st.button("🧠 Run Agent"):
 
                         if cleaned_entries:
                             cleaned_texts = [entry['cleaned'] for entry in cleaned_entries]
-                            cleaned_output = "\n".join(cleaned_texts)
+                            cleaned_output_txt = "\n".join(cleaned_texts)
 
                             st.success("✅ Cleaning Completed!")
-                            st.download_button("📥 Download Cleaned File", data=cleaned_output, file_name="cleaned_output.txt")
+                            st.download_button("📥 Download Cleaned TXT", data=cleaned_output_txt, file_name="cleaned_output.txt")
+
+                            # If original was CSV, prepare cleaned CSV too
+                            if input_file_type == "csv" and uploaded_csv_df is not None:
+                                # Create a new smaller cleaned dataframe
+                                df_cleaned = pd.DataFrame({
+                                    "Cleaned_Feedback": cleaned_texts
+                                    })
+
+                                cleaned_csv = df_cleaned.to_csv(index=False).encode("utf-8")
+
+
+                                st.download_button("📥 Download Cleaned CSV", data=cleaned_csv, file_name="cleaned_output.csv")
                         else:
                             st.warning("Nothing new was cleaned. Maybe all texts were already processed.")
                     else:

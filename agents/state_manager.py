@@ -1,25 +1,32 @@
-# agents/state_manager.py
-
+import os
 import json
-from pathlib import Path
 
-STATE_FOLDER = Path("logs")
-STATE_FOLDER.mkdir(parents=True, exist_ok=True)
+def load_state(state_file):
+    """Load the cleaned memory state."""
+    if not os.path.exists(state_file):
+        # Create an empty state if missing
+        with open(state_file, "w") as f:
+            json.dump({"cleaned": []}, f)
+        return {"cleaned": []}
 
-def load_state(filename: str) -> dict:
-    path = STATE_FOLDER / filename
-    if not path.exists():
-        path.write_text(json.dumps({"cleaned": []}))
-    with open(path, 'r') as f:
-        return json.load(f)
+    try:
+        with open(state_file, "r") as f:
+            state = json.load(f)
+    except (json.JSONDecodeError, ValueError):
+        # If file corrupted, reset it safely
+        state = {"cleaned": []}
+        with open(state_file, "w") as f:
+            json.dump(state, f)
+    return state
 
-def save_state(filename: str, state: dict):
-    path = STATE_FOLDER / filename
-    with open(path, 'w') as f:
+def save_state(state_file, state):
+    """Save the memory state back."""
+    with open(state_file, "w") as f:
         json.dump(state, f, indent=2)
 
-def add_cleaned_entry(filename: str, cleaned_text: str):
-    state = load_state(filename)
+def add_cleaned_entry(state_file, cleaned_text):
+    """Add a cleaned entry if it's not already in the state."""
+    state = load_state(state_file)
     if cleaned_text not in state["cleaned"]:
         state["cleaned"].append(cleaned_text)
-        save_state(filename, state)
+        save_state(state_file, state)

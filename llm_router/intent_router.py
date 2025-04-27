@@ -13,10 +13,18 @@ def detect_intent(prompt: str) -> str:
 
     result = subprocess.run(
         ["ollama", "run", "mistral"],
-        input=system_prompt.encode('utf-8'),  # 🛠 FIX: encode input manually
+        input=system_prompt.encode('utf-8'),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    output = result.stdout.decode('utf-8')  # 🛠 decode output manually
 
-    return output.strip().splitlines()[-1].strip().upper()
+    output = result.stdout.decode('utf-8').strip()
+
+    if not output:
+        return "UNKNOWN"
+
+    lines = output.splitlines()
+    if not lines:
+        return "UNKNOWN"
+
+    return lines[-1].strip().upper()
