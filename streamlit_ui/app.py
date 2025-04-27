@@ -1,4 +1,4 @@
-# streamlit_ui/app.py (auto-clear memory on Run Agent, simple version)
+# streamlit_ui/app.py (with progress bar added during cleaning)
 
 import streamlit as st
 import requests
@@ -87,6 +87,10 @@ if st.button("🧠 Run Agent"):
                     st.divider()
                     st.info("SurveyCleanMOD agent also running on full input...")
 
+                    # 🧠 Add Progress Bar Here
+                    progress_bar = st.progress(0)
+                    batch_size = len(texts_to_clean)
+
                     survey_response = requests.post(
                         "http://127.0.0.1:8000/toggle-agent",
                         json={"agent": "survey_clean_mod", "texts": texts_to_clean}
@@ -100,18 +104,20 @@ if st.button("🧠 Run Agent"):
                             cleaned_texts = [entry['cleaned'] for entry in cleaned_entries]
                             cleaned_output_txt = "\n".join(cleaned_texts)
 
+                            # Update progress manually
+                            for idx in range(batch_size):
+                                progress = (idx + 1) / batch_size
+                                progress_bar.progress(progress)
+
                             st.success("✅ Cleaning Completed!")
                             st.download_button("📥 Download Cleaned TXT", data=cleaned_output_txt, file_name="cleaned_output.txt")
 
                             # If original was CSV, prepare cleaned CSV too
                             if input_file_type == "csv" and uploaded_csv_df is not None:
-                                # Create a new smaller cleaned dataframe
                                 df_cleaned = pd.DataFrame({
                                     "Cleaned_Feedback": cleaned_texts
-                                    })
-
+                                })
                                 cleaned_csv = df_cleaned.to_csv(index=False).encode("utf-8")
-
 
                                 st.download_button("📥 Download Cleaned CSV", data=cleaned_csv, file_name="cleaned_output.csv")
                         else:
