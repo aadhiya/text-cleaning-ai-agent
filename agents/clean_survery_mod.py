@@ -20,14 +20,18 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 def run_agent(input_texts):
-    state = load_state()
+    state = load_state()  # ✅ Always load fresh
     new_cleaned = []
 
     for text in input_texts:
         cleaned = clean_text(text)
+
+        # ✅ Always add cleaned output to user
+        new_cleaned.append({"original": text, "cleaned": cleaned})
+
+        # ✅ Only update memory if new
         if cleaned not in state["cleaned"]:
             state["cleaned"].append(cleaned)
-            new_cleaned.append({"original": text, "cleaned": cleaned})
 
     save_state(state)
     return new_cleaned
